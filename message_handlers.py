@@ -73,21 +73,21 @@ class MessageHandlers:
         if not self.bot.is_admin(username):
             return False
         
-        if context.user_data.get(UserState.WAITING_FOR_USERNAME.value):
+        if context.user_data.get(UserState.WAITING_FOR_ADMIN_USERNAME.value):
             return await self._handle_admin_username_input(update, context, message_text)
-        elif context.user_data.get(UserState.WAITING_FOR_SHOP_ID.value):
+        elif context.user_data.get(UserState.WAITING_FOR_ADMIN_SHOP_ID.value):
             return await self._handle_admin_shop_id_input(update, context, message_text)
-        elif context.user_data.get(UserState.WAITING_FOR_SHOP_API_KEY.value):
+        elif context.user_data.get(UserState.WAITING_FOR_ADMIN_API_KEY.value):
             return await self._handle_admin_shop_api_key_input(update, context, message_text)
-        elif context.user_data.get(UserState.WAITING_FOR_ORDER_ID_TAG.value):
+        elif context.user_data.get(UserState.WAITING_FOR_ADMIN_ORDER_TAG.value):
             return await self._handle_admin_order_id_tag_input(update, context, message_text)
-        elif context.user_data.get(UserState.WAITING_FOR_DELETE_USERNAME.value):
+        elif context.user_data.get(UserState.WAITING_FOR_ADMIN_DELETE_USERNAME.value):
             return await self._handle_admin_delete_username_input(update, context, message_text)
-        elif context.user_data.get(UserState.WAITING_FOR_DELETE_SHOP_ID.value):
+        elif context.user_data.get(UserState.WAITING_FOR_ADMIN_DELETE_SHOP_ID.value):
             return await self._handle_admin_delete_shop_id_input(update, context, message_text)
         elif context.user_data.get(UserState.WAITING_FOR_INFO_EDIT.value):
             return await self._handle_admin_info_edit_input(update, context, message_text)
-        elif context.user_data.get(UserState.WAITING_FOR_BROADCAST.value):
+        elif context.user_data.get(UserState.WAITING_FOR_ADMIN_BROADCAST.value):
             return await self._handle_admin_broadcast_input(update, context, message_text)
         
         return False
