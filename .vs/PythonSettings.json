@@ -1,0 +1,4 @@
+{
+  "Interpreter": "merchBotEnv\\Scripts\\python.exe",
+  "TestFramework": "Pytest"
+}
