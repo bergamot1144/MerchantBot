@@ -334,8 +334,8 @@ class MessageHandlers:
     async def _handle_admin_username_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE, message_text: str):
         """Обработка ввода username админом"""
         context.user_data['temp_username'] = message_text
-        context.user_data[UserState.WAITING_FOR_USERNAME.value] = False
-        context.user_data[UserState.WAITING_FOR_SHOP_ID.value] = True
+        context.user_data[UserState.WAITING_FOR_ADMIN_USERNAME.value] = False
+        context.user_data[UserState.WAITING_FOR_ADMIN_SHOP_ID.value] = True
         
         message = f"👤 Укажите shop_id для пользователя @{message_text}"
         keyboard = [[KeyboardButton("◀️ Главное меню")]]
@@ -346,8 +346,8 @@ class MessageHandlers:
     async def _handle_admin_shop_id_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE, message_text: str):
         """Обработка ввода shop_id админом"""
         context.user_data['temp_shop_id'] = message_text
-        context.user_data[UserState.WAITING_FOR_SHOP_ID.value] = False
-        context.user_data[UserState.WAITING_FOR_SHOP_API_KEY.value] = True
+        context.user_data[UserState.WAITING_FOR_ADMIN_SHOP_ID.value] = False
+        context.user_data[UserState.WAITING_FOR_ADMIN_API_KEY.value] = True
         
         username = context.user_data.get('temp_username', 'Не указан')
         message = f"👤 Укажите shop_api_key для пользователя @{username}\n\nShop ID: {message_text}"
@@ -359,8 +359,8 @@ class MessageHandlers:
     async def _handle_admin_shop_api_key_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE, message_text: str):
         """Обработка ввода shop_api_key админом"""
         context.user_data['temp_shop_api_key'] = message_text
-        context.user_data[UserState.WAITING_FOR_SHOP_API_KEY.value] = False
-        context.user_data[UserState.WAITING_FOR_ORDER_ID_TAG.value] = True
+        context.user_data[UserState.WAITING_FOR_ADMIN_API_KEY.value] = False
+        context.user_data[UserState.WAITING_FOR_ADMIN_ORDER_TAG.value] = True
         
         username = context.user_data.get('temp_username', 'Не указан')
         shop_id = context.user_data.get('temp_shop_id', 'Не указан')
@@ -511,8 +511,8 @@ class MessageHandlers:
     async def _handle_admin_delete_username_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE, message_text: str):
         """Обработка ввода username для удаления"""
         context.user_data['delete_username'] = message_text
-        context.user_data[UserState.WAITING_FOR_DELETE_USERNAME.value] = False
-        context.user_data[UserState.WAITING_FOR_DELETE_SHOP_ID.value] = True
+        context.user_data[UserState.WAITING_FOR_ADMIN_DELETE_USERNAME.value] = False
+        context.user_data[UserState.WAITING_FOR_ADMIN_DELETE_SHOP_ID.value] = True
         
         message = f"Для подтверждения действия отправьте shop_id, к которому был привязан пользователь @{message_text}."
         keyboard = [[KeyboardButton("◀️ Главное меню")]]
