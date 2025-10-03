@@ -3,7 +3,10 @@
 
 BOT_TOKEN = "7608770565:AAGZCjP2IVBgAU4Jaiah7ZomxnZMuRYQb28"
 ADMIN_USERNAME = "vv_vega"
-DATABASE_PATH = "db.db"
+
+# Настройки MongoDB
+MONGO_URI = "mongodb://localhost:27017"
+MONGO_DB_NAME = "merchant_bot"
 
 # API URLs для Konvert2pay
 API_BASE_URL = "https://konvert2pay.me/api/v1"

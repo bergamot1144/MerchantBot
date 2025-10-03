@@ -26,16 +26,15 @@ class ShowUsersCommand(BaseCommand):
         if users:
             message = "👤 Пользователи, у которых есть доступ к Боту:\n\n"
             for i, user in enumerate(users, 1):
-                user_id, username_db, first_name, last_name, is_merchant, shop_id, shop_api_key, order_id_tag, created_at = user
-                message += f"{i}) @{username_db} (ID: {user_id})\n"
-                if is_merchant:
-                    message += f"   Статус: Мерчант\n"
-                    message += f"   shop_id: {shop_id or 'Не указан'}\n"
-                    message += f"   shop_api_key: {shop_api_key or 'Не указан'}\n"
-                    if order_id_tag:
-                        message += f"   order_id_tag: {order_id_tag}\n"
+                message += f"{i}) @{user.get('username')} (ID: {user.get('user_id')})\n"
+                if user.get('is_merchant'):
+                    message += "   Статус: Мерчант\n"
+                    message += f"   shop_id: {user.get('shop_id') or 'Не указан'}\n"
+                    message += f"   shop_api_key: {user.get('shop_api_key') or 'Не указан'}\n"
+                    if user.get('order_id_tag'):
+                        message += f"   order_id_tag: {user.get('order_id_tag')}\n"
                 else:
-                    message += f"   Статус: Обычный пользователь\n"
+                    message += "   Статус: Обычный пользователь\n"
                 message += "\n"
         else:
             message = "👤 Пользователи, у которых есть доступ к Боту:\n\nСписок пуст."

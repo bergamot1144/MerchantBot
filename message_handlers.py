@@ -527,16 +527,16 @@ class MessageHandlers:
         
         # Проверяем, что shop_id соответствует username
         user_data = self.bot.get_user_by_username(username)
-        if user_data and user_data[2] == shop_id:  # user_data[2] это shop_id
+        if user_data and user_data.get("shop_id") == shop_id:
             # Отправляем webhook перед удалением
             user_info = {
-                "user_id": user_data[0],
+                "user_id": user_data.get("user_id"),
                 "username": username,
                 "shop_id": shop_id
             }
             additional_data = {
-                "shop_api_key": user_data[3],
-                "order_id_tag": user_data[4],
+                "shop_api_key": user_data.get("shop_api_key"),
+                "order_id_tag": user_data.get("order_id_tag"),
                 "deleted_by_admin": True
             }
             await WebhookSender.send_user_action_webhook("deleted", user_info, additional_data)
@@ -549,7 +549,13 @@ class MessageHandlers:
             # Показываем обновленный список пользователей
             users = self.bot.get_all_users()
             if users:
-                user_list = "\n".join([f"{i+1}) @{user[1]} shop_id: {user[2]} shop_api_key: {user[3]}" for i, user in enumerate(users)])
+                user_list = "\n".join(
+                    [
+                        f"{i+1}) @{user.get('username')} shop_id: {user.get('shop_id') or 'Не указан'} "
+                        f"shop_api_key: {user.get('shop_api_key') or 'Не указан'}"
+                        for i, user in enumerate(users)
+                    ]
+                )
                 message += f"\n\n👤 Пользователи, у которых есть доступ к Боту:\n{user_list}"
             else:
                 message += "\n\n👤 Пользователи, у которых есть доступ к Боту: Нет активных пользователей"
@@ -777,14 +783,22 @@ class MessageHandlers:
         """Обработка создания рассылки"""
         users = self.bot.get_all_users()
         if users:
+            sent_count = 0
             for user in users:
+                chat_id = user.get("user_id")
+                if not chat_id:
+                    continue
                 try:
                     # Отправляем сообщение каждому пользователю
-                    await context.bot.send_message(chat_id=user[0], text=message_text)
+                    await context.bot.send_message(chat_id=chat_id, text=message_text)
+                    sent_count += 1
                 except Exception as e:
-                    logger.error(f"Ошибка отправки сообщения пользователю {user[1]}: {e}")
-            
-            message = f"✅ Рассылка отправлена {len(users)} пользователям."
+                    logger.error(f"Ошибка отправки сообщения пользователю {user.get('username')}: {e}")
+
+            if sent_count:
+                message = f"✅ Рассылка отправлена {sent_count} пользователям."
+            else:
+                message = "⚠️ Не удалось отправить сообщение: нет пользователей с доступным chat_id."
         else:
             message = "❌ Нет пользователей для рассылки."
         
