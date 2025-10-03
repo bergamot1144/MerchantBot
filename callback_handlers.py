@@ -25,6 +25,10 @@ class CallbackHandlers:
         if data in ["invoice_method_card", "invoice_method_oneclick", "invoice_method_iban"]:
             return await self._handle_invoice_method_selection(query, context, data)
         
+        # Обработка выбора метода выплаты
+        elif data in ["payout_method_card", "payout_method_iban"]:
+            return await self._handle_payout_method_selection(query, context, data)
+        
         # Обработка кнопок назначения платежа
         elif data in ["purpose_popovnennya", "purpose_povorennya", "purpose_perekaz"]:
             return await self._handle_purpose_selection(query, context, data)
@@ -56,28 +60,42 @@ class CallbackHandlers:
             await query.edit_message_text("❌ Ошибка: Настройки мерчанта не найдены.")
             return True
             
-        order_id_tag = settings[3]
+        # Сохраняем выбранный метод
+        context.user_data['invoice_method'] = data
+        context.user_data['current_state'] = UserState.WAITING_FOR_INVOICE_ID.value
+        context.user_data[UserState.WAITING_FOR_INVOICE_ID.value] = True
         
-        if order_id_tag:
-            # Если есть order_id_tag, пропускаем первый шаг
-            auto_order_id = self.bot.get_next_order_id(user_id)
-            context.user_data['invoice_order_id'] = auto_order_id
-            context.user_data[UserState.WAITING_FOR_CLIENT_ID.value] = True
+        # Отладочная информация
+        print(f"DEBUG: Setting WAITING_FOR_INVOICE_ID state")
+        print(f"DEBUG: context.user_data after setting: {context.user_data}")
+        
+        message = "🎰 Укажите ID инвойса"
+        keyboard = [[KeyboardButton("◀️ Главное меню")]]
+        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        await query.edit_message_text(message)
+        await query.message.reply_text(".", reply_markup=reply_markup)
+        
+        return True
+    
+    async def _handle_payout_method_selection(self, query, context: ContextTypes.DEFAULT_TYPE, data: str):
+        """Обработка выбора метода выплаты"""
+        user_id = query.from_user.id
+        settings = self.bot.get_merchant_settings(user_id)
+        
+        if not settings:
+            await query.edit_message_text("❌ Ошибка: Настройки мерчанта не найдены.")
+            return True
             
-            message = f"🎰 Укажите ID Клиента\n\nORDER ID автоматически установлен: {auto_order_id}"
-            keyboard = [[KeyboardButton("◀️ Главное меню")]]
-            reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-            await query.edit_message_text(message)
-            await query.message.reply_text(" ", reply_markup=reply_markup)
-        else:
-            # Если нет order_id_tag, запрашиваем ID инвойса
-            context.user_data[UserState.WAITING_FOR_INVOICE_ID.value] = True
-            
-            message = "🎰 Укажите ID инвойса"
-            keyboard = [[KeyboardButton("◀️ Главное меню")]]
-            reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-            await query.edit_message_text(message)
-            await query.message.reply_text(" ", reply_markup=reply_markup)
+        # Сохраняем выбранный метод
+        context.user_data['payout_method'] = data
+        context.user_data['current_state'] = UserState.WAITING_FOR_PAYOUT_ORDER_ID.value
+        context.user_data[UserState.WAITING_FOR_PAYOUT_ORDER_ID.value] = True
+        
+        message = "💎 Укажите ID заявки"
+        keyboard = [[KeyboardButton("◀️ Главное меню")]]
+        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        await query.edit_message_text(message)
+        await query.message.reply_text(".", reply_markup=reply_markup)
         
         return True
     
@@ -157,7 +175,7 @@ class CallbackHandlers:
             ]
             reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
             await query.edit_message_text(message)
-            await query.message.reply_text("👨🏻‍💻 Главное меню", reply_markup=reply_markup)
+            await query.message.reply_text(".", reply_markup=reply_markup)
         else:
             # Ошибка создания инвойса
             error = result.get('Error', {})
@@ -173,7 +191,7 @@ class CallbackHandlers:
             ]
             reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
             await query.edit_message_text(message)
-            await query.message.reply_text("👨🏻‍💻 Главное меню", reply_markup=reply_markup)
+            await query.message.reply_text(".", reply_markup=reply_markup)
         
         # Очищаем состояние
         StateManager.clear_invoice_states(context)
@@ -244,7 +262,7 @@ class CallbackHandlers:
             ]
             reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
             await query.edit_message_text(message)
-            await query.message.reply_text("👨🏻‍💻 Главное меню", reply_markup=reply_markup)
+            await query.message.reply_text(".", reply_markup=reply_markup)
         else:
             # Ошибка создания выплаты
             error = result.get('Error', {})
@@ -260,7 +278,7 @@ class CallbackHandlers:
             ]
             reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
             await query.edit_message_text(message)
-            await query.message.reply_text("👨🏻‍💻 Главное меню", reply_markup=reply_markup)
+            await query.message.reply_text(".", reply_markup=reply_markup)
         
         # Очищаем состояние
         StateManager.clear_payout_states(context)

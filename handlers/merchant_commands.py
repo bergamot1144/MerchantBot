@@ -4,6 +4,7 @@
 from telegram import Update, KeyboardButton, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import ContextTypes
 from handlers.base import BaseCommand
+from states import UserState
 
 
 class ProfileCommand(BaseCommand):
@@ -84,9 +85,9 @@ class CreateInvoiceCommand(BaseCommand):
         message = "🎰 Выберите метод для инвойса"
         # Inline кнопки для выбора метода
         inline_keyboard = [
-            [InlineKeyboardButton("💳 Card", callback_data="invoice_card"),
-             InlineKeyboardButton("⚡ OneClick", callback_data="invoice_oneclick"),
-             InlineKeyboardButton("🏦 IBAN", callback_data="invoice_iban")]
+            [InlineKeyboardButton("💳 Card", callback_data="invoice_method_card"),
+             InlineKeyboardButton("⚡ OneClick", callback_data="invoice_method_oneclick"),
+             InlineKeyboardButton("🏦 IBAN", callback_data="invoice_method_iban")]
         ]
         inline_markup = InlineKeyboardMarkup(inline_keyboard)
         
@@ -123,8 +124,8 @@ class CreatePayoutCommand(BaseCommand):
         message = "💎 Выберите метод для выплаты"
         # Inline кнопки для выбора метода
         inline_keyboard = [
-            [InlineKeyboardButton("💳 Card", callback_data="payout_card"),
-             InlineKeyboardButton("🏦 IBAN", callback_data="payout_iban")]
+            [InlineKeyboardButton("💳 Card", callback_data="payout_method_card"),
+             InlineKeyboardButton("🏦 IBAN", callback_data="payout_method_iban")]
         ]
         inline_markup = InlineKeyboardMarkup(inline_keyboard)
         
@@ -170,6 +171,6 @@ class LogoutCommand(BaseCommand):
         remove_keyboard = ReplyKeyboardRemove()
         
         await update.message.reply_text(message, reply_markup=reply_markup)
-        context.user_data['current_state'] = 'waiting_for_logout_confirm'
+        context.user_data['current_state'] = UserState.WAITING_FOR_LOGOUT_CONFIRMATION.value
         context.user_data['logout_username'] = username
         return True

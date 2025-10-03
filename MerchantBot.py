@@ -207,7 +207,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     
     # Обработка через обработчики callback
-    await bot_instance.callback_handlers.handle_callback(query, context)
+    await bot_instance.callback_handlers.handle_callback(update, context)
 
 def main():
     """Основная функция запуска бота"""

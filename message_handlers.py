@@ -21,13 +21,21 @@ class MessageHandlers:
         user = update.effective_user
         message_text = update.message.text.strip()
         
+        # Отладочная информация
+        print(f"DEBUG: handle_invoice_states called with message: '{message_text}'")
+        print(f"DEBUG: Current states: {context.user_data}")
+        
         if context.user_data.get(UserState.WAITING_FOR_INVOICE_ID.value):
+            print("DEBUG: Processing WAITING_FOR_INVOICE_ID")
             return await self._handle_invoice_id_input(update, context, message_text)
         elif context.user_data.get(UserState.WAITING_FOR_CLIENT_ID.value):
+            print("DEBUG: Processing WAITING_FOR_CLIENT_ID")
             return await self._handle_client_id_input(update, context, message_text)
         elif context.user_data.get(UserState.WAITING_FOR_AMOUNT.value):
+            print("DEBUG: Processing WAITING_FOR_AMOUNT")
             return await self._handle_amount_input(update, context, message_text)
         
+        print("DEBUG: No invoice state matched")
         return False
     
     async def handle_payout_states(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -128,6 +136,7 @@ class MessageHandlers:
     async def _handle_invoice_id_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE, message_text: str):
         """Обработка ввода ID инвойса"""
         context.user_data['invoice_order_id'] = message_text
+        context.user_data['current_state'] = UserState.WAITING_FOR_CLIENT_ID.value
         context.user_data[UserState.WAITING_FOR_INVOICE_ID.value] = False
         context.user_data[UserState.WAITING_FOR_CLIENT_ID.value] = True
         
@@ -140,6 +149,7 @@ class MessageHandlers:
     async def _handle_client_id_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE, message_text: str):
         """Обработка ввода ID клиента"""
         context.user_data['invoice_client_id'] = message_text
+        context.user_data['current_state'] = UserState.WAITING_FOR_AMOUNT.value
         context.user_data[UserState.WAITING_FOR_CLIENT_ID.value] = False
         context.user_data[UserState.WAITING_FOR_AMOUNT.value] = True
         
@@ -155,6 +165,7 @@ class MessageHandlers:
         try:
             amount = float(message_text)
             context.user_data['invoice_amount'] = amount
+            context.user_data['current_state'] = None  # Завершаем флоу
             context.user_data[UserState.WAITING_FOR_AMOUNT.value] = False
             
             invoice_order_id = context.user_data.get('invoice_order_id', 'Не указан')
@@ -270,7 +281,7 @@ class MessageHandlers:
         reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
         
         await update.message.reply_text(message, reply_markup=inline_markup)
-        await update.message.reply_text("", reply_markup=reply_markup)
+        await update.message.reply_text(".", reply_markup=reply_markup)
         return True
     
     async def _handle_purpose_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE, message_text: str):
@@ -364,7 +375,7 @@ class MessageHandlers:
         reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
         
         await update.message.reply_text(message, reply_markup=inline_markup)
-        await update.message.reply_text("", reply_markup=reply_markup)
+        await update.message.reply_text(".", reply_markup=reply_markup)
         return True
     
     async def _handle_admin_order_id_tag_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE, message_text: str):
@@ -447,7 +458,7 @@ class MessageHandlers:
             return await self.handle_logout_state(update, context)
         
         # Обработка команд мерчанта
-        elif message_text in ["👤 Профиль", "📄 Информация", "🎰 Создать инвойс", "💎 Создать выплату"]:
+        elif message_text in ["👤 Профиль", "📄 Информация", "🎰 Создать инвойс", "💎 Создать выплату", "❌ Выйти из аккаунта"]:
             return await self.handle_merchant_commands(update, context)
         
         # Обработка команд админа
@@ -458,7 +469,7 @@ class MessageHandlers:
     
     async def handle_merchant_commands(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
         """Обработка команд мерчанта"""
-        from handlers.merchant_commands import ProfileCommand, InfoCommand, InvoiceCommand, PayoutCommand
+        from handlers.merchant_commands import ProfileCommand, InfoCommand, CreateInvoiceCommand, CreatePayoutCommand, LogoutCommand
         
         if update.message.text == "👤 Профиль":
             command = ProfileCommand(self.bot)
@@ -467,23 +478,26 @@ class MessageHandlers:
             command = InfoCommand(self.bot)
             return await command.handle(update, context)
         elif update.message.text == "🎰 Создать инвойс":
-            command = InvoiceCommand(self.bot)
+            command = CreateInvoiceCommand(self.bot)
             return await command.handle(update, context)
         elif update.message.text == "💎 Создать выплату":
-            command = PayoutCommand(self.bot)
+            command = CreatePayoutCommand(self.bot)
+            return await command.handle(update, context)
+        elif update.message.text == "❌ Выйти из аккаунта":
+            command = LogoutCommand(self.bot)
             return await command.handle(update, context)
         
         return False
     
     async def handle_admin_commands(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
         """Обработка команд админа"""
-        from handlers.admin_commands import ShowUsersCommand, BroadcastCommand, AddUserCommand, DeleteUserCommand
+        from handlers.admin_commands import ShowUsersCommand, CreateBroadcastCommand, AddUserCommand, DeleteUserCommand
         
         if update.message.text == "👤 Пользователи":
             command = ShowUsersCommand(self.bot)
             return await command.handle(update, context)
         elif update.message.text == "✉️ Создать рассылку":
-            command = BroadcastCommand(self.bot)
+            command = CreateBroadcastCommand(self.bot)
             return await command.handle(update, context)
         elif update.message.text == "👤 Добавить пользователя":
             command = AddUserCommand(self.bot)
@@ -602,7 +616,7 @@ class MessageHandlers:
             return await self.handle_logout_state(update, context)
         
         # Обработка команд мерчанта
-        elif message_text in ["👤 Профиль", "📄 Информация", "🎰 Создать инвойс", "💎 Создать выплату"]:
+        elif message_text in ["👤 Профиль", "📄 Информация", "🎰 Создать инвойс", "💎 Создать выплату", "❌ Выйти из аккаунта"]:
             return await self.handle_merchant_commands(update, context)
         
         # Обработка команд админа
@@ -613,7 +627,7 @@ class MessageHandlers:
     
     async def handle_merchant_commands(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
         """Обработка команд мерчанта"""
-        from handlers.merchant_commands import ProfileCommand, InfoCommand, InvoiceCommand, PayoutCommand
+        from handlers.merchant_commands import ProfileCommand, InfoCommand, CreateInvoiceCommand, CreatePayoutCommand, LogoutCommand
         
         if update.message.text == "👤 Профиль":
             command = ProfileCommand(self.bot)
@@ -622,23 +636,26 @@ class MessageHandlers:
             command = InfoCommand(self.bot)
             return await command.handle(update, context)
         elif update.message.text == "🎰 Создать инвойс":
-            command = InvoiceCommand(self.bot)
+            command = CreateInvoiceCommand(self.bot)
             return await command.handle(update, context)
         elif update.message.text == "💎 Создать выплату":
-            command = PayoutCommand(self.bot)
+            command = CreatePayoutCommand(self.bot)
+            return await command.handle(update, context)
+        elif update.message.text == "❌ Выйти из аккаунта":
+            command = LogoutCommand(self.bot)
             return await command.handle(update, context)
         
         return False
     
     async def handle_admin_commands(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
         """Обработка команд админа"""
-        from handlers.admin_commands import ShowUsersCommand, BroadcastCommand, AddUserCommand, DeleteUserCommand
+        from handlers.admin_commands import ShowUsersCommand, CreateBroadcastCommand, AddUserCommand, DeleteUserCommand
         
         if update.message.text == "👤 Пользователи":
             command = ShowUsersCommand(self.bot)
             return await command.handle(update, context)
         elif update.message.text == "✉️ Создать рассылку":
-            command = BroadcastCommand(self.bot)
+            command = CreateBroadcastCommand(self.bot)
             return await command.handle(update, context)
         elif update.message.text == "👤 Добавить пользователя":
             command = AddUserCommand(self.bot)
@@ -706,7 +723,7 @@ class MessageHandlers:
             return await self.handle_logout_state(update, context)
         
         # Обработка команд мерчанта
-        elif message_text in ["👤 Профиль", "📄 Информация", "🎰 Создать инвойс", "💎 Создать выплату"]:
+        elif message_text in ["👤 Профиль", "📄 Информация", "🎰 Создать инвойс", "💎 Создать выплату", "❌ Выйти из аккаунта"]:
             return await self.handle_merchant_commands(update, context)
         
         # Обработка команд админа
@@ -717,7 +734,7 @@ class MessageHandlers:
     
     async def handle_merchant_commands(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
         """Обработка команд мерчанта"""
-        from handlers.merchant_commands import ProfileCommand, InfoCommand, InvoiceCommand, PayoutCommand
+        from handlers.merchant_commands import ProfileCommand, InfoCommand, CreateInvoiceCommand, CreatePayoutCommand, LogoutCommand
         
         if update.message.text == "👤 Профиль":
             command = ProfileCommand(self.bot)
@@ -726,23 +743,26 @@ class MessageHandlers:
             command = InfoCommand(self.bot)
             return await command.handle(update, context)
         elif update.message.text == "🎰 Создать инвойс":
-            command = InvoiceCommand(self.bot)
+            command = CreateInvoiceCommand(self.bot)
             return await command.handle(update, context)
         elif update.message.text == "💎 Создать выплату":
-            command = PayoutCommand(self.bot)
+            command = CreatePayoutCommand(self.bot)
+            return await command.handle(update, context)
+        elif update.message.text == "❌ Выйти из аккаунта":
+            command = LogoutCommand(self.bot)
             return await command.handle(update, context)
         
         return False
     
     async def handle_admin_commands(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
         """Обработка команд админа"""
-        from handlers.admin_commands import ShowUsersCommand, BroadcastCommand, AddUserCommand, DeleteUserCommand
+        from handlers.admin_commands import ShowUsersCommand, CreateBroadcastCommand, AddUserCommand, DeleteUserCommand
         
         if update.message.text == "👤 Пользователи":
             command = ShowUsersCommand(self.bot)
             return await command.handle(update, context)
         elif update.message.text == "✉️ Создать рассылку":
-            command = BroadcastCommand(self.bot)
+            command = CreateBroadcastCommand(self.bot)
             return await command.handle(update, context)
         elif update.message.text == "👤 Добавить пользователя":
             command = AddUserCommand(self.bot)
@@ -819,7 +839,7 @@ class MessageHandlers:
             return await self.handle_logout_state(update, context)
         
         # Обработка команд мерчанта
-        elif message_text in ["👤 Профиль", "📄 Информация", "🎰 Создать инвойс", "💎 Создать выплату"]:
+        elif message_text in ["👤 Профиль", "📄 Информация", "🎰 Создать инвойс", "💎 Создать выплату", "❌ Выйти из аккаунта"]:
             return await self.handle_merchant_commands(update, context)
         
         # Обработка команд админа
@@ -830,7 +850,7 @@ class MessageHandlers:
     
     async def handle_merchant_commands(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
         """Обработка команд мерчанта"""
-        from handlers.merchant_commands import ProfileCommand, InfoCommand, InvoiceCommand, PayoutCommand
+        from handlers.merchant_commands import ProfileCommand, InfoCommand, CreateInvoiceCommand, CreatePayoutCommand, LogoutCommand
         
         if update.message.text == "👤 Профиль":
             command = ProfileCommand(self.bot)
@@ -839,23 +859,26 @@ class MessageHandlers:
             command = InfoCommand(self.bot)
             return await command.handle(update, context)
         elif update.message.text == "🎰 Создать инвойс":
-            command = InvoiceCommand(self.bot)
+            command = CreateInvoiceCommand(self.bot)
             return await command.handle(update, context)
         elif update.message.text == "💎 Создать выплату":
-            command = PayoutCommand(self.bot)
+            command = CreatePayoutCommand(self.bot)
+            return await command.handle(update, context)
+        elif update.message.text == "❌ Выйти из аккаунта":
+            command = LogoutCommand(self.bot)
             return await command.handle(update, context)
         
         return False
     
     async def handle_admin_commands(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
         """Обработка команд админа"""
-        from handlers.admin_commands import ShowUsersCommand, BroadcastCommand, AddUserCommand, DeleteUserCommand
+        from handlers.admin_commands import ShowUsersCommand, CreateBroadcastCommand, AddUserCommand, DeleteUserCommand
         
         if update.message.text == "👤 Пользователи":
             command = ShowUsersCommand(self.bot)
             return await command.handle(update, context)
         elif update.message.text == "✉️ Создать рассылку":
-            command = BroadcastCommand(self.bot)
+            command = CreateBroadcastCommand(self.bot)
             return await command.handle(update, context)
         elif update.message.text == "👤 Добавить пользователя":
             command = AddUserCommand(self.bot)
