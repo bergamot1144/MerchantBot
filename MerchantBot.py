@@ -2,6 +2,9 @@
 Рефакторированный Telegram бот для мерчантов Konvert2pay
 """
 import logging
+from collections.abc import Iterable
+from typing import List, Sequence, Tuple, Union
+
 from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters
 from config import BOT_TOKEN, LOG_LEVEL, LOG_FORMAT
@@ -13,6 +16,7 @@ from constants import Messages, Buttons, CallbackData
 from states import UserState, StateManager
 from message_handlers import MessageHandlers
 from callback_handlers import CallbackHandlers
+from pymongo import ASCENDING
 
 # Настройка логирования
 logging.basicConfig(
@@ -38,7 +42,47 @@ class MerchantBot:
         
         # Инициализация базы данных
         self.init_database()
-    
+
+    @staticmethod
+    def _normalize_index_keys(keys: Union[str, Sequence[Union[str, Tuple[str, int]]]]) -> List[Tuple[str, int]]:
+        """Привести формат ключей индекса к списку кортежей."""
+
+        if isinstance(keys, str):
+            return [(keys, ASCENDING)]
+
+        normalized: List[Tuple[str, int]] = []
+        for key in keys:
+            if isinstance(key, str):
+                normalized.append((key, ASCENDING))
+            elif isinstance(key, Iterable):
+                key_tuple = tuple(key)
+                if len(key_tuple) != 2:
+                    raise ValueError(f"Некорректная спецификация индекса: {key!r}")
+                normalized.append((key_tuple[0], key_tuple[1]))
+            else:
+                raise TypeError(f"Некорректный тип ключа индекса: {type(key)!r}")
+
+        return normalized
+
+    @staticmethod
+    def ensure_index(collection, keys: Union[str, Sequence[Union[str, Tuple[str, int]]]], **kwargs) -> str:
+        """Создать индекс, если эквивалентный ещё не существует."""
+
+        normalized_keys = MerchantBot._normalize_index_keys(keys)
+        desired_options = {k: v for k, v in kwargs.items() if k != "name"}
+
+        for index in collection.list_indexes():
+            existing_keys = [(key, direction) for key, direction in index["key"].items()]
+            if existing_keys != normalized_keys:
+                continue
+
+            options_match = all(index.get(opt_key) == opt_value for opt_key, opt_value in desired_options.items())
+            if options_match:
+                return index.get("name")
+
+        create_kwargs = {k: v for k, v in kwargs.items() if v is not None}
+        return collection.create_index(normalized_keys, **create_kwargs)
+
     def init_database(self):
         """Инициализация базы данных"""
         users = self.db_manager.get_collection("users")
@@ -46,11 +90,39 @@ class MerchantBot:
         info_block = self.db_manager.get_collection("info_block")
         order_counters = self.db_manager.get_collection("order_counters")
 
-        users.create_index("user_id", unique=True, sparse=True)
-        users.create_index("username", unique=True, sparse=True)
-        merchant_settings.create_index("user_id", unique=True, sparse=True)
-        info_block.create_index("_id", unique=True)
-        order_counters.create_index("order_id_tag", unique=True)
+        self.ensure_index(
+            users,
+            [("user_id", ASCENDING)],
+            name="users_user_id_unique_idx",
+            unique=True,
+            sparse=True,
+        )
+        self.ensure_index(
+            users,
+            [("username", ASCENDING)],
+            name="users_username_unique_idx",
+            unique=True,
+            sparse=True,
+        )
+        self.ensure_index(
+            merchant_settings,
+            [("user_id", ASCENDING)],
+            name="merchant_settings_user_id_unique_idx",
+            unique=True,
+            sparse=True,
+        )
+        self.ensure_index(
+            info_block,
+            [("_id", ASCENDING)],
+            name="info_block_id_unique_idx",
+            unique=True,
+        )
+        self.ensure_index(
+            order_counters,
+            [("order_id_tag", ASCENDING)],
+            name="order_counters_order_id_tag_unique_idx",
+            unique=True,
+        )
     
     # Методы для совместимости с существующим кодом
     def is_merchant(self, user_id: int) -> bool:
