@@ -237,7 +237,7 @@ class WaitingForDeleteUsernameState(BaseState):
         
         # Сохраняем данные пользователя для проверки
         context.user_data['delete_username'] = delete_username
-        context.user_data['delete_user_shop_id'] = user_data[5]  # shop_id из базы
+        context.user_data['delete_user_shop_id'] = user_data.get('shop_id')  # shop_id из базы
         
         message = f"Для подтверждения действия отправьте shop_id, к которому был привязан пользователь @{delete_username}."
         keyboard = [
@@ -300,13 +300,12 @@ class WaitingForDeleteShopIdState(BaseState):
             if users:
                 message = "👤 Пользователи, у которых есть доступ к Боту:\n\n"
                 for i, user in enumerate(users, 1):
-                    user_id, username_db, first_name, last_name, is_merchant, shop_id, shop_api_key, order_id_tag, created_at = user
-                    if is_merchant:
-                        message += f"{i}) @{username_db}\n"
-                        message += f"shop_id: {shop_id or 'Не указан'}\n"
-                        message += f"shop_api_key: {shop_api_key or 'Не указан'}\n"
-                        if order_id_tag:
-                            message += f"order_id_tag: {order_id_tag}\n"
+                    if user.get('is_merchant'):
+                        message += f"{i}) @{user.get('username')}\n"
+                        message += f"shop_id: {user.get('shop_id') or 'Не указан'}\n"
+                        message += f"shop_api_key: {user.get('shop_api_key') or 'Не указан'}\n"
+                        if user.get('order_id_tag'):
+                            message += f"order_id_tag: {user.get('order_id_tag')}\n"
                         message += "\n"
             else:
                 message = "👤 Пользователи, у которых есть доступ к Боту:\n\nСписок пуст."

@@ -41,50 +41,16 @@ class MerchantBot:
     
     def init_database(self):
         """Инициализация базы данных"""
-        with self.db_manager.get_connection() as conn:
-            cursor = conn.cursor()
-            
-            # Создание таблицы пользователей
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS users (
-                    user_id INTEGER PRIMARY KEY,
-                    username TEXT,
-                    first_name TEXT,
-                    last_name TEXT,
-                    is_merchant BOOLEAN DEFAULT FALSE,
-                    merchant_settings TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            
-            # Создание таблицы настроек мерчанта
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS merchant_settings (
-                    user_id INTEGER PRIMARY KEY,
-                    shop_id TEXT,
-                    shop_api_key TEXT,
-                    order_id_tag TEXT,
-                    FOREIGN KEY (user_id) REFERENCES users (user_id)
-                )
-            ''')
-            
-            # Создание таблицы информационного блока
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS info_block (
-                    id INTEGER PRIMARY KEY,
-                    content TEXT
-                )
-            ''')
-            
-            # Создание таблицы счетчиков заказов
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS order_counters (
-                    order_id_tag TEXT PRIMARY KEY,
-                    counter INTEGER DEFAULT 0
-                )
-            ''')
-            
-            conn.commit()
+        users = self.db_manager.get_collection("users")
+        merchant_settings = self.db_manager.get_collection("merchant_settings")
+        info_block = self.db_manager.get_collection("info_block")
+        order_counters = self.db_manager.get_collection("order_counters")
+
+        users.create_index("user_id", unique=True, sparse=True)
+        users.create_index("username", unique=True, sparse=True)
+        merchant_settings.create_index("user_id", unique=True, sparse=True)
+        info_block.create_index("_id", unique=True)
+        order_counters.create_index("order_id_tag", unique=True)
     
     # Методы для совместимости с существующим кодом
     def is_merchant(self, user_id: int) -> bool:
@@ -130,17 +96,14 @@ class MerchantBot:
     def delete_user(self, username: str) -> bool:
         """Удалить пользователя"""
         return self.user_manager.delete_user(username)
-    
+
     def get_all_users(self) -> list:
         """Получить всех пользователей с полной информацией"""
-        query = """
-            SELECT u.user_id, u.username, NULL as first_name, NULL as last_name, u.is_merchant, 
-                   ms.shop_id, ms.shop_api_key, ms.order_id_tag, NULL as created_at
-            FROM users u
-            LEFT JOIN merchant_settings ms ON u.user_id = ms.user_id
-            ORDER BY u.user_id DESC
-        """
-        return self.db_manager.execute_query(query)
+        return self.user_manager.get_all_users()
+
+    def get_user_by_username(self, username: str):
+        """Получить пользователя по username"""
+        return self.user_manager.get_user_by_username(username)
 
 # Создаем глобальный экземпляр бота
 bot_instance = MerchantBot()
