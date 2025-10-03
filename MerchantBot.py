@@ -132,8 +132,14 @@ class MerchantBot:
         return self.user_manager.delete_user(username)
     
     def get_all_users(self) -> list:
-        """Получить всех пользователей"""
-        query = "SELECT user_id, username FROM users"
+        """Получить всех пользователей с полной информацией"""
+        query = """
+            SELECT u.user_id, u.username, NULL as first_name, NULL as last_name, u.is_merchant, 
+                   ms.shop_id, ms.shop_api_key, ms.order_id_tag, NULL as created_at
+            FROM users u
+            LEFT JOIN merchant_settings ms ON u.user_id = ms.user_id
+            ORDER BY u.user_id DESC
+        """
         return self.db_manager.execute_query(query)
 
 # Создаем глобальный экземпляр бота

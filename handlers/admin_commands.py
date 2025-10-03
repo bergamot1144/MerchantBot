@@ -4,6 +4,7 @@
 from telegram import Update, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import ContextTypes
 from handlers.base import BaseCommand
+from states import UserState
 
 
 class ShowUsersCommand(BaseCommand):
@@ -26,13 +27,16 @@ class ShowUsersCommand(BaseCommand):
             message = "👤 Пользователи, у которых есть доступ к Боту:\n\n"
             for i, user in enumerate(users, 1):
                 user_id, username_db, first_name, last_name, is_merchant, shop_id, shop_api_key, order_id_tag, created_at = user
+                message += f"{i}) @{username_db} (ID: {user_id})\n"
                 if is_merchant:
-                    message += f"{i}) @{username_db}\n"
-                    message += f"shop_id: {shop_id or 'Не указан'}\n"
-                    message += f"shop_api_key: {shop_api_key or 'Не указан'}\n"
+                    message += f"   Статус: Мерчант\n"
+                    message += f"   shop_id: {shop_id or 'Не указан'}\n"
+                    message += f"   shop_api_key: {shop_api_key or 'Не указан'}\n"
                     if order_id_tag:
-                        message += f"order_id_tag: {order_id_tag}\n"
-                    message += "\n"
+                        message += f"   order_id_tag: {order_id_tag}\n"
+                else:
+                    message += f"   Статус: Обычный пользователь\n"
+                message += "\n"
         else:
             message = "👤 Пользователи, у которых есть доступ к Боту:\n\nСписок пуст."
         
@@ -68,7 +72,7 @@ class CreateBroadcastCommand(BaseCommand):
         await update.message.reply_text(message, reply_markup=reply_markup)
         
         # Устанавливаем состояние ожидания текста рассылки
-        context.user_data['current_state'] = 'waiting_for_broadcast_text'
+        context.user_data['current_state'] = UserState.WAITING_FOR_ADMIN_BROADCAST.value
         return True
 
 
@@ -96,7 +100,7 @@ class AddUserCommand(BaseCommand):
         await update.message.reply_text(message, reply_markup=reply_markup)
         
         # Устанавливаем состояние ожидания username
-        context.user_data['current_state'] = 'waiting_for_username'
+        context.user_data['current_state'] = UserState.WAITING_FOR_ADMIN_USERNAME.value
         return True
 
 
@@ -124,7 +128,7 @@ class DeleteUserCommand(BaseCommand):
         await update.message.reply_text(message, reply_markup=reply_markup)
         
         # Устанавливаем состояние ожидания username для удаления
-        context.user_data['current_state'] = 'waiting_for_delete_username'
+        context.user_data['current_state'] = UserState.WAITING_FOR_ADMIN_DELETE_USERNAME.value
         return True
 
 
